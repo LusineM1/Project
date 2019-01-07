@@ -1,0 +1,262 @@
+---
+title: "project"
+author: "Arevik Harmandayan,Lusine Mehrabyan"
+date: "May 7, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+melbourne<-read.csv("C:/Users/Arevik/Downloads/melbourne-housing-market/Melbourne_housing_FULL.csv")
+#View(melbourne)
+melbourne = na.omit(melbourne) #removing rows with missing data
+
+melbourne = melbourne[melbourne$Landsize>300 & melbourne$Landsize<700,]
+melbourne = melbourne[melbourne$Rooms>1 & melbourne$Rooms<5 ,]
+melbourne_aov = melbourne_aov[melbourne_aov$Car>1 & melbourne_aov$Car<6 ,]
+melbourne_aov = melbourne[melbourne$BuildingArea<135,]
+melbourne_aov = melbourne_aov[melbourne_aov$BuildingArea>85,]
+
+#summary(melbourne)
+str(melbourne_aov)
+```
+
+Single factor Anova
+```{r}
+#We have made the rooms as a factor variable to deal with it more easily.
+#Now we want to see the relationship between house price & rooms, and we use single factor Anova test.
+melbourne_aov$Rooms<-factor(melbourne_aov$Rooms)
+room_fit<-aov(Price~Rooms, data=melbourne_aov)
+summary(room_fit)
+#The Null hypotesis is that all the means are equal, and the alternative is that at least one of them isn't equal to the others.
+#p-value < alpha => we reject the Null hypotesis & say that at least one of the means is different from the others.
+#This means that for different number of rooms the price of the house is different. 
+
+library(ggplot2)
+ggplot(melbourne_aov, aes(x=Rooms, y=Price))+geom_boxplot()+
+  stat_summary(fun.y=mean, geom="point", size=3.5, color="Green")+
+  xlab("Number of rooms")+ylab("Price")+ggtitle("Relationship between house price & rooms")
+
+ggplot(melbourne_aov, aes(x=Rooms, y=Price))+geom_dotplot()+
+  stat_summary(fun.y=mean, geom="point", size=3.5, color="Green")+
+  xlab("Number of rooms")+ylab("Price")+ggtitle("Relationship between house price & rooms")
+
+#From the plots we can see that the means are almost equal for houses with 2 and 4 rooms, but for houses with 3 rooms the mean is less.
+
+#Relationship between house price & the number of cars
+melbourne_aov$Car<-factor(melbourne_aov$Car)
+car_fit<-aov(Price~Car, data=melbourne_aov)
+summary(car_fit)
+#p-value > alpha => we fail to reject the Null hypotesis and claim that all the means are equal.
+#This means that for different number of cars the price of the house is almost the same.
+
+ggplot(melbourne_aov, aes(x=Car, y=Price))+geom_boxplot()+
+  stat_summary(fun.y=mean, geom="point", size=3.5, color="Orange")+
+  xlab("Number of cars")+ylab("Price")+ggtitle("Relationship between house price & car")
+
+
+#Relationship between house price & house types
+melbourne$Type<-factor(melbourne$Type)
+type_fit<-aov(Price~Car, data=melbourne)
+summary(type_fit)
+#p-value < alpha => we reject the Null hypotesis & say that at least one of the means is different from the others.
+#This means that for different types of houses the prices are different.
+
+ggplot(melbourne, aes(x=Type, y=Price))+geom_boxplot()+
+  stat_summary(fun.y=mean, geom="point", size=3.5, color="Purple")+
+  xlab("House Types")+ylab("Price")+ggtitle("Relationship between house price & type")
+
+#From the plot we can see that for villas(h) and for townhouses(t) the means are almost equal, but for duplex houses(u) the mean is less than the others.
+
+#Relationship between house price & selling method
+melbourne$Method<-factor(melbourne$Method)
+method_fit<-aov(Price~Method, data=melbourne)
+summary(method_fit)
+#p-value < alpha => we reject the Null hypotesis & say that at least one of the means is different from the others.
+#This means that for different selling methods the prices of houses are different.
+
+ggplot(melbourne, aes(x=Method, y=Price))+geom_boxplot()+
+  stat_summary(fun.y=mean, geom="point", size=3.5, color="sienna1")+
+  xlab("Selling method")+ylab("Price")+ggtitle("Relationship between house price & selling method")
+
+#We can see that the means aren't equal to each other.
+
+```
+Two factor anova
+```{r}
+#Relationship between House prices & number of rooms and cars
+#I want to know how the number of rooms and the number of cars affect the price. For that, I use two factor Anova.
+fit1<-aov(Price~Car+Rooms+Car:Rooms, data=melbourne_aov)
+summary(fit1)
+#p-value < alpha rooms => we can say that it affects the price, and there is a main effect for this variable.
+#p-value > alpha cars => we can say that it doesn't affect the price, and there is no main effect for this variable.
+#There is no interaction effect as p-value > alpha for interaction.
+
+
+#Visualizing the interactions
+#Interaction plot
+ggplot(melbourne_aov,aes(Car,Price,color=Rooms))+
+  stat_summary(fun.y = mean,geom="line",aes(group=Rooms))+
+  stat_summary(fun.y = mean,geom="point")+
+  labs(x="Number of cars", title="Interaction plot")
+
+#Number of parking slots effects the price, no metter how many rooms are there in the house.
+
+#Relationship between House prices & number of rooms and house types
+fit2<-aov(Price~Rooms+Type+Rooms:Type, data=melbourne_aov)
+summary(fit2)
+#p-value < alpha house types  => we can say that it affects the price, and there is a main effect for this variable.
+#p-value > alpha room numbers => we can say that it doesn't affect the price, and there is no main effect for this variable.
+#There is an interaction effect as p-value < alpha for interaction.
+
+#Visualizing the interactions
+#Interaction plot
+ggplot(melbourne_aov,aes(Type,Price,color=Rooms))+
+  stat_summary(fun.y = mean,geom="line",aes(group=Rooms))+
+  stat_summary(fun.y = mean,geom="point")+
+  labs(x="House types", title="Interaction plot")
+
+# For houses with 2 and 3 rooms there is an interaction effect, but for houses with 4 rooms there is no interaction.
+
+#Relationship between House prices & number of cars and house
+fit3<-aov(Price~Car+Type+Car:Type, data=melbourne_aov)
+summary(fit3)
+#p-value < alpha house types  => we can say that it affects the price, and there is a main effect for this variable.
+#p-value > alpha room car => we can say that it doesn't affect the price, and there is no main effect for this variable.
+#There is no interaction effect as p-value > alpha for interaction.
+
+#Visualizing the interactions
+#Interaction plot
+ggplot(melbourne_aov,aes(Car,Price,color=Type))+
+  stat_summary(fun.y = mean,geom="line",aes(group=Type))+
+  stat_summary(fun.y = mean,geom="point")+
+  labs(x="Number of cars", title="Interaction plot")
+
+#No matter what type the house is, the car slot has effect on the house price.
+
+
+
+```
+
+Regression
+```{r}
+
+str(melbourne)
+melbourne$Car<-factor(melbourne$Car)
+melbourne$Rooms<-factor(melbourne$Rooms)
+#I don't use some feilds that I won't effect the model much,and it does not make seanse to put them in.
+
+m1<-lm(Price~Suburb+Rooms+Type+Date+Distance+Bathroom+Car+Landsize+BuildingArea+YearBuilt,data=melbourne)
+summary(m1)
+
+#The R Squared is 0.8317 which means tha is explains the 83% of total variation .
+
+#Now let' s check is the reliationship between Price and some of the feilds we choose is linear. 
+
+ggplot(melbourne,aes(x=Landsize,y=Price))+geom_point()+
+  geom_smooth(method = 'lm',se=FALSE)+
+  ggtitle("Landsize and Price")
+#This releationship is not linear
+
+ggplot(melbourne,aes(x=BuildingArea,y=Price))+geom_point()+
+  geom_smooth(method = 'lm',se=FALSE)+
+  ggtitle("Building Area and Price")
+#This relationship in not perfect but we can call it linear
+
+
+
+
+m2<-lm(Price~Suburb+Rooms+Type+Date+Distance+Bathroom+BuildingArea+YearBuilt,data=melbourne)
+summary(m2)
+
+#The R Squared for m2 is 0.8217
+#p-value < alpha, so we reject the NULL hypothesis, at least 1 of the bettas is not 0
+
+
+coefficients(m2)
+#1 unit increasein Bathrooms is 109663 unit increase in price
+#1 unit increasein BuildingArea is 1126 unit increase in price
+#1 unit increasein BuildingArea is 1213 unit decrease in price
+
+#Cars and landsize where not as significant so the R Sqaured did not suffer much.
+
+library(rsq)
+rsq.partial(objF=m1,objR = m2)
+
+#Only 5.6% of variance expalined by the independants of m1 is not explained by the independants of the m2
+
+
+
+qqnorm(m2$residuals)
+qqline(m2$residuals)
+#The sample doesn't have normal distribution as we can see from the plot.
+
+shapiro.test(m2$residuals)
+#p_value<0.05 so the sample doesn't have normal distribution
+
+#Residual plot
+library(ggplot2)
+ggplot()+geom_point(aes(x=m1$fitted.values, y=m2$residuals))+
+  labs(x="Fitted values", y="Residuals", title="Residuals vs Fitted values")
+#Variance equality assumption is violated 
+
+
+#Let's try to do ridge regresstion and compare the results.
+#install.packages("ridge")
+library(ridge)
+ridgem1 <- linearRidge(Price~Bathroom+BuildingArea+YearBuilt,data=melbourne) # the ridge regression model
+summary(ridgem1)
+lm3<-lm(Price~Bathroom+BuildingArea+YearBuilt,data=melbourne)
+summary(lm3)
+
+
+
+m3<-lm(log(Price)~Suburb+Rooms+Type+Date+Bathroom+BuildingArea+YearBuilt,data=melbourne)
+summary(m3)
+
+#R squared is 0.8717, which is good,
+#p-value < alpha, so we reject the NULL hypothesis, at least 1 of the bettas is not 0
+
+
+qqnorm(m3$residuals)
+qqline(m3$residuals)
+#This is better then the original
+shapiro.test(m3$residuals)
+#p_value<0.05 so the sample doesn't have normal distribution
+
+
+ggplot()+geom_point(aes(x=m3$fitted.values, y=m3$residuals))+
+  labs(x="Fitted values", y="Residuals", title="Residuals vs Fitted values")
+#Variance equality assumption is not violated 
+
+
+
+str(melbourne)
+test<-melbourne[seq(1,nrow(melbourne),4),]
+set.seed(1)
+str(test)
+train<-melbourne[-seq(1,nrow(melbourne),4),]
+str(train)
+
+summary(train)
+test$Suburb
+model<-lm(Price~Suburb+Rooms+Type+Date+Distance+Bathroom+BuildingArea+YearBuilt,data=train)
+summary(model)
+#R Squared is 0.8234
+#p-value < alpha so we reject the NULL hypothesis, at least 1 of the bettas is not 0
+
+#The test and train need to have the same factor values,so I need to delete some rows for the test
+test<-test[!(test$Suburb %in% c('Aspendale Gardens', 'Hallam', 'Kooyong', 'Lysterfield', 'Mickleham', 'Sandhurst', 'The Basin')),]
+test<-test[test$Distance!=10.9,]
+
+library(Metrics)
+predict_price<-predict(model,newdata = test)
+rmse(predict_price,test$Price)
+#Taken into account that the mean price of a house is nearly 1100000, this rmse is not ba
+summary(train)
+
+```
